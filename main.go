@@ -1,30 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"net/http"
+	"os"
+	"os/signal"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/petershaan12/go-learn/application"
 )
 
 func main() {
-	router := chi.NewRouter()
-	router.Use(middleware.Logger)
+	app := application.New()
 
-	router.Get("/hello", basicHandler)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
 
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
-	}
-
-	err := server.ListenAndServe()
+	err := app.Start(ctx)
 	if err != nil {
-		fmt.Println("Error starting server:", err)
+		fmt.Println("Error starting application:", err)
 	}
-}
-
-func basicHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello, World!"))
 }
