@@ -135,7 +135,7 @@ func (r *RedisRepo) FindAll(ctx context.Context, page FindAllPage) (FindResult, 
 		return FindResult{}, fmt.Errorf("failed to mget orders: %w", err)
 	}
 
-	orders := make([]model.Order, 0, len(xs))
+	orders := make([]model.Order, len(xs))
 
 	for i, x := range xs {
 		x := x.(string)

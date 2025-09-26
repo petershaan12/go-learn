@@ -24,7 +24,7 @@ func (h *Order) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -39,20 +39,21 @@ func (h *Order) Create(w http.ResponseWriter, r *http.Request) {
 
 	err := h.Repo.Insert(r.Context(), order)
 	if err != nil {
-		fmt.Println("failed to insert", err)
+		fmt.Println("failed to insert:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	res, err := json.Marshal(order)
 	if err != nil {
-		fmt.Println("failed to marshal", err)
+		fmt.Println("failed to marshal:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.Write(res)
+	fmt.Println("Order created with ID:", order.OrderID)
 	w.WriteHeader(http.StatusCreated)
+	w.Write(res)
 }
 
 func (h *Order) List(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +76,7 @@ func (h *Order) List(w http.ResponseWriter, r *http.Request) {
 		Size:   size,
 	})
 	if err != nil {
-		fmt.Println("failed to find all orders", err)
+		fmt.Println("failed to find all:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -84,19 +85,17 @@ func (h *Order) List(w http.ResponseWriter, r *http.Request) {
 		Items []model.Order `json:"items"`
 		Next  uint64        `json:"next,omitempty"`
 	}
-
 	response.Items = res.Orders
 	response.Next = res.Cursor
 
 	data, err := json.Marshal(response)
 	if err != nil {
-		fmt.Println("failed to marshal response", err)
+		fmt.Println("failed to marshal:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	w.Write(data)
-
 }
 
 func (o *Order) GetById(w http.ResponseWriter, r *http.Request) {
