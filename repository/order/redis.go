@@ -67,23 +67,15 @@ func (r *RedisRepo) DeleteByID(ctx context.Context, id uint64) error {
 	key := orderIDKey(id)
 
 	txn := r.Client.TxPipeline()
+	delCmd := txn.Del(ctx, key)
 
-	err := txn.Del(ctx, key).Err()
-	if errors.Is(err, redis.Nil) {
-		txn.Discard()
+	_, err := txn.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to exec: %w", err)
+	}
+
+	if delCmd.Val() == 0 {
 		return ErrNotExist
-	} else if err != nil {
-		txn.Discard()
-		return fmt.Errorf("delete order from redis: %w", err)
-	}
-
-	if err := txn.SRem(ctx, "orders", id).Err(); err != nil {
-		txn.Discard()
-		return fmt.Errorf("failed to remove order ID from orders set: %w", err)
-	}
-
-	if _, err := txn.Exec(ctx); err != nil {
-		return fmt.Errorf("failed to execute transaction: %w", err)
 	}
 
 	return nil
@@ -97,10 +89,11 @@ func (r *RedisRepo) Update(ctx context.Context, order model.Order) error {
 
 	key := orderIDKey(order.OrderID)
 
-	err = r.Client.SetXX(ctx, key, string(data), 0).Err()
-	if errors.Is(err, redis.Nil) {
+	cmd := r.Client.SetXX(ctx, key, string(data), 0)
+	if !cmd.Val() {
 		return ErrNotExist
-	} else if err != nil {
+	}
+	if err := cmd.Err(); err != nil {
 		return fmt.Errorf("failed to update order in redis: %w", err)
 	}
 	return nil
